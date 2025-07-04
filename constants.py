@@ -1,0 +1,9 @@
+D_MODEL = 128          # Embedding dimension
+NHEAD = 8              # Number of attention heads
+NUM_ENCODER_LAYERS = 3
+NUM_DECODER_LAYERS = 3
+DIM_FEEDFORWARD = 512  # Dimension of the feedforward network model in nn.TransformerEncoder
+DROPOUT = 0.1
+LEARNING_RATE = 0.0001
+BATCH_SIZE = 32
+NUM_EPOCHS = 25
