@@ -1,8 +1,9 @@
+import torch
+import math
 from create_padded_batch import create_padded_batch
+from constants import D_MODEL
 
-def inference(test_smiles):
-    print(f"Original SMILES: {test_smiles}")
-
+def inference(model, DEVICE, tokenizer, test_smiles):
     src = create_padded_batch([test_smiles], tokenizer, DEVICE)
     src_padding_mask = (src == tokenizer.char_to_int[tokenizer.pad_token])
     
@@ -33,4 +34,4 @@ def inference(test_smiles):
         tgt_tokens.append(next_token_id)
 
     reconstructed_smiles = tokenizer.decode(tgt_tokens)
-    print(f"Reconstructed SMILES: {reconstructed_smiles}")
+    return reconstructed_smiles

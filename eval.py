@@ -5,7 +5,7 @@ from smiles_transformer import SmilesTransformer
 from constants import D_MODEL, NHEAD, NUM_ENCODER_LAYERS, NUM_DECODER_LAYERS, DIM_FEEDFORWARD, DROPOUT
 from smiles_data import smiles_data
 from create_padded_batch import create_padded_batch
-
+from inference import inference
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
 
@@ -21,8 +21,10 @@ model = SmilesTransformer(
     dim_feedforward=DIM_FEEDFORWARD,
     dropout=DROPOUT
 ).to(DEVICE)
+
 model.load_state_dict(torch.load("model.save.pth", weights_only=True))
 model.eval()
+
 with torch.no_grad():
     for test_smiles in [
     "CC(=O)OC1=CC=CC=C1C(=O)O", # Aspirin
@@ -38,36 +40,6 @@ with torch.no_grad():
     "C1=CC=CS1", # Thiophene
     "CC(=O)NCCC1=CNC2=C1C=C(C=C2)OC", # Melatonin
     ]:
-
-        src = create_padded_batch([test_smiles], tokenizer, DEVICE)
-        src_padding_mask = (src == tokenizer.char_to_int[tokenizer.pad_token])
-        
-        # Encode the source SMILES
-        src_embed = model.pos_encoder(model.embedding(src.transpose(0, 1)) * math.sqrt(D_MODEL))
-        memory = model.transformer_encoder(src_embed, src_key_padding_mask=src_padding_mask)
-
-        # Start decoding with the <sos> token
-        tgt_tokens = [tokenizer.char_to_int[tokenizer.sos_token]]
-        max_len_decode = len(test_smiles) + 10
-
-        for _ in range(max_len_decode):
-            tgt_tensor = torch.LongTensor(tgt_tokens).unsqueeze(1).to(DEVICE) # (seq_len, 1)
-            
-            tgt_embed = model.pos_encoder(model.embedding(tgt_tensor) * math.sqrt(D_MODEL))
-            tgt_mask = model._generate_square_subsequent_mask(tgt_tensor.size(0)).to(DEVICE)
-
-            output = model.transformer_decoder(tgt_embed, memory, tgt_mask)
-            output = model.fc_out(output)
-
-            # Get the last token prediction
-            next_token_logits = output[-1, 0, :]
-            next_token_id = next_token_logits.argmax(0).item()
-            
-            if next_token_id == tokenizer.char_to_int[tokenizer.eos_token]:
-                break
-            
-            tgt_tokens.append(next_token_id)
-
-        reconstructed_smiles = tokenizer.decode(tgt_tokens)
+        reconstructed_smiles = inference(model, DEVICE, tokenizer, test_smiles)
         print(f"Original SMILES: {test_smiles}")
         print(f"Reconstructed SMILES: {reconstructed_smiles}")
